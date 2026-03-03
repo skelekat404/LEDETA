@@ -31,3 +31,13 @@ Ingestion is modular so we can add Avocado later.
 - Explainability:
   - drivers + evidence snippets
 - Audit log (JSONL) for each scoring run
+
+## (NEEDS TO BE UPDATED)
+
+- ++ ADD A DROP BOX LINK WITH ALL DATA FILES
+
+- ++ ADD RQ FILE EXPLANATIONS
+
+- ++ ADD EDA FILE EXPLANATION
+
+- ++ ADD RQ OUTPUT EXPLANATIONS
