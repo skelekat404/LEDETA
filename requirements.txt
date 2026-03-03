@@ -1,0 +1,5 @@
+streamlit==1.37.1
+pandas==2.2.2
+numpy==2.0.1
+scikit-learn==1.5.1
+python-dateutil==2.9.0.post0
