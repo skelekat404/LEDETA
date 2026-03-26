@@ -1,4 +1,12 @@
 # ledeta/model.py
+
+#DESCRIPTION: model.py manages the full machine-learning layer of LEDETA. It 
+# converts case objects into engineered numeric features, uses rubric-derived 
+# case scores as the supervised target, trains or loads a LightGBM regression 
+# pipeline with median imputation, saves the model and its metadata, generates 
+# case-level ML predictions, and optionally compares those predictions against 
+# rubric scores using MAE, RMSE, R-squared, and absolute error outputs.
+
 from __future__ import annotations
 
 import os
@@ -19,7 +27,7 @@ from ledeta.features import extract_engineered_features, DEFAULT_KEYWORDS
 
 
 DEFAULT_MODEL_DIR = "ledeta_models"
-DEFAULT_MODEL_NAME = "rubric_regressor.joblib"
+DEFAULT_MODEL_NAME = "lgbm_rubric_regressor.joblib"
 
 
 def _try_import_lgbm():

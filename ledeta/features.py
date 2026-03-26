@@ -1,3 +1,10 @@
+#DESCRIPTION:features.py operationalizes the case-level variables used by both the rubric and the 
+# ML model. It aggregates all emails in a case, extracts interpretable grouped signals for money 
+# operations, bank changes, approval bypass, record cleanup, secrecy, vague language, urgency, 
+# spam/marketing cues, communication breadth, external-domain patterns, and temporal burst 
+# behavior, and then returns those values as a numeric feature dictionary for downstream scoring 
+# and modeling.
+
 from __future__ import annotations
 from typing import Dict, List, Optional
 import re

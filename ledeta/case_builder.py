@@ -1,3 +1,10 @@
+#DESCRIPTION: case_builder.py defines the dissertation’s case-construction logic. It 
+# takes raw email records, keeps only the required and relevant metadata fields, 
+# parses and sorts the data by employee and time, then groups each employee’s emails 
+# into non-overlapping fixed-duration windows to create case objects. Each case stores 
+# its identifier, employee, window boundaries, email metadata, optionally truncated 
+# body text, and email count.
+
 from __future__ import annotations
 
 from datetime import timedelta

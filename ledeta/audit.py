@@ -1,8 +1,13 @@
-from __future__ import annotations
-import json
-import os
-from datetime import datetime
-from typing import Any, Dict, Optional
+#DESCRIPTION: audit.py defines the AuditLogger class, which creates structured JSONL audit records for reviewed cases. 
+# Each record stores the timestamp, run ID, case identifiers, case window, number of emails, priority score, priority 
+# band, and the explanation payload. This supports the dissertation’s governance, traceability, and auditability 
+# requirements.
+
+from __future__ import annotations #changes how Python handles type annotations so they are stored more efficiently. help modernize typing behavior
+import json #allows for conversion to JSON
+import os #file path compatability
+from datetime import datetime #timestamps
+from typing import Any, Dict, Optional ##Any = any Python type allowed, Dict = dict, Optional = a value may either be the specified type or None
 
 
 class AuditLogger:

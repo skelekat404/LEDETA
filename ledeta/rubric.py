@@ -1,3 +1,11 @@
+#DESCIPTION: rubric.py defines the dissertation’s proxy case-prioritization logic. 
+# It converts engineered case features into an ethics-oriented score, applies a spam 
+# penalty to produce the final triage score, flags clearly spam-dominant low-risk 
+# cases for filtering, limits Critical outcomes through a multi-category gate, and 
+# returns both structured score components and human-readable reasons. The 
+# backward-compatible wrapper then exposes the triage score as the model’s supervised 
+# target.
+
 from __future__ import annotations
 
 import math

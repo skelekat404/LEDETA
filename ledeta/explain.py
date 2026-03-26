@@ -1,3 +1,9 @@
+#DESCRIPTION: explain.py translates LEDETA’s case-level signals into reviewer-facing reasoning. 
+# It recomputes the engineered features for the selected case, derives interpretable risk tags, 
+# identifies the strongest feature drivers, selectively scans for relevant term families, 
+# extracts supporting email snippets, and packages all of that into a structured explanation 
+# object that supports human review and auditability
+
 from __future__ import annotations
 
 from typing import Dict, Any, List, Set, Tuple
