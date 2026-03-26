@@ -1,4 +1,4 @@
-# LEDETA (MVP) — Law Enforcement Digital Evidence Triage Assistant
+# LEDETA - Law Enforcement Digital Evidence Triage Assistant
 
 This repo is a dissertation prototype for **case-level** triage of text-based evidence (emails).
 A "case" is defined as **all emails for one employee in a 30-day window**.
@@ -14,14 +14,14 @@ streamlit run app.py
 ```
 
 ## Data expectations (flexible)
-This MVP supports two input modes:
+This prototype supports two input modes:
 1) Upload a CSV with at least: `employee`, `date`, `subject`, `body`
 2) Use the built-in demo dataset toggle (synthetic) to validate the app works
 
 If you want to use Enron, convert it into the above CSV schema (one row per email).
 Ingestion is modular so we can add Avocado later.
 
-## What this MVP includes
+## What this includes
 - Case builder: employee + 30-day window aggregation
 - Feature extraction:
   - volume/communication metrics
