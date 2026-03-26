@@ -32,7 +32,7 @@ Ingestion is modular so we can add Avocado later.
   - drivers + evidence snippets
 - Audit log (JSONL) for each scoring run
 
-## (NEEDS TO BE UPDATED)
+## (NEEDS TO BE UPDATED RIGHT BEFORE FINAL SUBMISSION - APRIL 10TH)
 
 - ++ ADD A DROP BOX LINK WITH ALL DATA FILES
 
