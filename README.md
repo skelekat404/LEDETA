@@ -14,18 +14,17 @@ streamlit run app.py
 ```
 
 ## Data expectations (flexible)
-This prototype supports two input modes:
-1) Upload a CSV with at least: `employee`, `date`, `subject`, `body`
-2) Use the built-in demo dataset toggle (synthetic) to validate the app works
-
-If you want to use Enron, convert it into the above CSV schema (one row per email).
-Ingestion is modular so we can add Avocado later.
+This prototype supports two input modes: file path pasting or file upload.
+1) Upload your own CSV with at least: `employee`, `date`, `subject`, `body` (not recommended since we have demo data)
+2) Use the built-in demo dataset in the repo (synthetic) to validate the app works (recommended, varying sizes)
+3) Use the Enron cleaned up dataset (download and move to 'datatset' folder in project directory)
+   https://www.dropbox.com/scl/fo/0f7ayl1fj8f0wzsoyq3s2/AEPwwA9NZlitAlCq6OYkaYw?rlkey=n4dzsedpyn9lqw2dwqtreipdk&st=muaum8nx&dl=0
 
 ## What this includes
 - Case builder: employee + 30-day window aggregation
 - Feature extraction:
   - volume/communication metrics
-  - keyword indicators (fraud/financial)
+  - keyword indicators (misconduct)
   - TF-IDF text features
 - Priority rubric (proxy ground truth) + optional supervised model
 - Explainability:
