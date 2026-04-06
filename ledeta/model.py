@@ -4,8 +4,8 @@
 # converts case objects into engineered numeric features, uses rubric-derived 
 # case scores as the supervised target, trains or loads a LightGBM regression 
 # pipeline with median imputation, saves the model and its metadata, generates 
-# case-level ML predictions, and optionally compares those predictions against 
-# rubric scores using MAE, RMSE, R-squared, and absolute error outputs.
+# case-level ML predictions and severity assignments, and optionally compares those 
+# predictions against rubric scores using MAE, RMSE, R-squared, and absolute error outputs.
 
 from __future__ import annotations
 
@@ -236,11 +236,12 @@ def predict_cases(
     for c, score in zip(cases, yhat):
         c_out = dict(c)
         c_out["priority_score"] = float(score)
-        c_out["priority_band"] = pd.cut(
+        c_out["priority_severity"] = pd.cut(
             [score],
             bins=[-1, 25, 50, 75, 100],
             labels=["Low", "Medium", "High", "Critical"],
         )[0]
+        c_out["priority_band"] = c_out["priority_severity"]  # legacy compatibility
         out.append(c_out)
 
     return pd.DataFrame(out)
@@ -252,11 +253,16 @@ def predict_cases_with_rubric_comparison(
     sample_n: Optional[int] = None,
 ) -> tuple[pd.DataFrame, Dict[str, float]]:
     df_pred = predict_cases(train_result, cases).rename(
-        columns={"priority_score": "ml_score", "priority_band": "ml_band"}
+        columns={
+            "priority_score": "ml_score",
+            "priority_severity": "ml_severity",
+            "priority_band": "ml_band",  # legacy compatibility
+        }
     )
 
     df_pred["rubric_score"] = np.nan
-    df_pred["rubric_band"] = pd.NA
+    df_pred["rubric_severity"] = pd.NA
+    df_pred["rubric_band"] = pd.NA  # legacy compatibility
     df_pred["abs_error"] = np.nan
 
     if sample_n is None or sample_n <= 0 or sample_n >= len(df_pred):
@@ -274,11 +280,13 @@ def predict_cases_with_rubric_comparison(
 
         s, _ = score_case_rubric(c)
         df_pred.at[i, "rubric_score"] = float(s)
-        df_pred.at[i, "rubric_band"] = pd.cut(
+        rubric_severity = pd.cut(
             [s],
             bins=[-1, 25, 50, 75, 100],
             labels=["Low", "Medium", "High", "Critical"],
         )[0]
+        df_pred.at[i, "rubric_severity"] = rubric_severity
+        df_pred.at[i, "rubric_band"] = rubric_severity  # legacy compatibility
 
     eval_mask = df_pred["rubric_score"].notna()
     df_pred.loc[eval_mask, "abs_error"] = (

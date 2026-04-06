@@ -1,5 +1,5 @@
 #DESCRIPTION: explain.py translates LEDETA’s case-level signals into reviewer-facing reasoning. 
-# It recomputes the engineered features for the selected case, derives interpretable risk tags, 
+# It recomputes the engineered features for the selected case, derives interpretable severity indicators,
 # identifies the strongest feature drivers, selectively scans for relevant term families, 
 # extracts supporting email snippets, and packages all of that into a structured explanation 
 # object that supports human review and auditability
@@ -95,7 +95,7 @@ def _fallback_snippets(case: Dict, k: int = 6) -> List[Dict[str, str]]:
     return [_make_snip(emails[i]) for i in take_idx]
 
 
-def _risk_tags_from_features(feats: Dict[str, float]) -> List[str]:
+def _severity_tags_from_features(feats: Dict[str, float]) -> List[str]:
     tags: List[str] = []
 
     spam_signal = _safe_num(feats.get("spam_signal"), 0.0)
@@ -117,7 +117,6 @@ def _risk_tags_from_features(feats: Dict[str, float]) -> List[str]:
     if _safe_num(feats.get("low_specificity_flag"), 0.0) > 0 and _safe_num(feats.get("urgent_subjects"), 0.0) > 0:
         tags.append("Urgency + low specificity pattern")
 
-    # Mild money ops tags (fits scope but not dominant)
     if _safe_num(feats.get("bank_change_hits"), 0.0) > 0 or _safe_num(feats.get("mentions_bank_account"), 0.0) > 0:
         tags.append("Bank/wire-change language present")
 
@@ -127,7 +126,7 @@ def _risk_tags_from_features(feats: Dict[str, float]) -> List[str]:
 def _term_groups(feats: Dict[str, float]) -> List[str]:
     """
     Choose which term families to prioritize based on features.
-    This prevents scanning for everything when most cases are low-risk.
+    This prevents scanning for everything when most cases are low severity.
     """
     groups: List[str] = []
 
@@ -247,7 +246,7 @@ def explain_case(case: Dict, scored_row: Dict[str, Any]) -> Dict[str, Any]:
         {"name": "offline_secrecy_hits", "value": feats.get("offline_secrecy_hits"), "note": "Off-channel/secrecy language (call me, don’t email, offline)"},
         {"name": "approval_bypass_hits", "value": feats.get("approval_bypass_hits"), "note": "Approval/control bypass language"},
         {"name": "record_tamper_hits", "value": feats.get("record_tamper_hits"), "note": "Record cleanup/tampering language"},
-        {"name": "low_specificity_flag", "value": feats.get("low_specificity_flag"), "note": "Low specificity / vague request flag"},
+        {"name": "low_specificity_flag", "value": feats.get("low_specificity_flag"), "note": "Low specificity / vague request indicator"},
         {"name": "urgent_subjects", "value": feats.get("urgent_subjects"), "note": "Urgency terms in subject"},
         {"name": "distancing_hits", "value": feats.get("distancing_hits", 0.0), "note": "Distancing/evasive language (if enabled)"},
         {"name": "spam_signal", "value": feats.get("spam_signal"), "note": "Marketing/spam composite signal"},
@@ -264,7 +263,7 @@ def explain_case(case: Dict, scored_row: Dict[str, Any]) -> Dict[str, Any]:
         d["value"] = _safe_num(d.get("value"), default=0.0)
 
     top_features = sorted(drivers, key=lambda d: d["value"], reverse=True)[:8]
-    risk_tags = _risk_tags_from_features(feats)
+    severity_tags = _severity_tags_from_features(feats)
 
     # Choose term groups based on features (faster + more relevant)
     groups = _term_groups(feats)
@@ -280,12 +279,13 @@ def explain_case(case: Dict, scored_row: Dict[str, Any]) -> Dict[str, Any]:
         f"Bypass={_safe_num(feats.get('approval_bypass_hits')):.1f}, "
         f"Cleanup={_safe_num(feats.get('record_tamper_hits')):.1f}, "
         f"Spam={_safe_num(feats.get('spam_signal')):.1f}. "
-        f"Tags: {', '.join(risk_tags) if risk_tags else 'None'}."
+        f"Severity indicators: {', '.join(severity_tags) if severity_tags else 'None'}."
     )
 
     return {
         "summary": summary,
-        "risk_tags": risk_tags,
+        "risk_tags": severity_tags,       # legacy compatibility
+        "severity_tags": severity_tags,   # preferred naming
         "top_features": top_features,
         "salient_terms": salient_terms,
         "snippets": snippets,

@@ -1,9 +1,9 @@
-#DESCRIPTION:features.py operationalizes the case-level variables used by both the rubric and the 
-# ML model. It aggregates all emails in a case, extracts interpretable grouped signals for money 
-# operations, bank changes, approval bypass, record cleanup, secrecy, vague language, urgency, 
-# spam/marketing cues, communication breadth, external-domain patterns, and temporal burst 
-# behavior, and then returns those values as a numeric feature dictionary for downstream scoring 
-# and modeling.
+#DESCRIPTION: features.py operationalizes the case-level variables used by both the rubric and the
+# ML model. It aggregates all emails in a case, extracts interpretable grouped signals for money
+# operations, bank changes, approval bypass, record cleanup, secrecy, vague language, urgency,
+# spam/marketing cues, communication breadth, external-domain patterns, and temporal burst
+# behavior, and then returns those values as a numeric feature dictionary for downstream scoring,
+# severity assignment, and modeling.
 
 from __future__ import annotations
 from typing import Dict, List, Optional
@@ -30,7 +30,7 @@ def _safe_float(x, default=0.0) -> float:
 
 
 # -----------------------------
-# Keyword groups (fraud + spam)
+# Keyword groups (ethics-related + spam)
 # -----------------------------
 # You can expand these over time. Keep them defensible: "process/control bypass" > "embezzle".
 MONEY_OPS_TERMS = [
@@ -160,7 +160,7 @@ def extract_engineered_features(case: Dict, keywords: Optional[List[str]] = None
     feats["unique_keywords_hit"] = float(_count_term_docs(text_all, kw))
 
     # -----------------------------
-    # Fraud-related grouped signals
+    # Ethics-related grouped signals
     # -----------------------------
     feats["money_ops_hits"] = float(_count_term_hits(text_all, MONEY_OPS_TERMS))
     feats["money_ops_unique"] = float(_count_term_docs(text_all, MONEY_OPS_TERMS))
@@ -265,7 +265,7 @@ def extract_engineered_features(case: Dict, keywords: Optional[List[str]] = None
         from_domains += _extract_domains(e.get("from"))
         to_domains += _extract_domains(e.get("to"))
 
-    # ratio of emails involving free email domains (often spammy or risky)
+    # count of emails involving free email domains (often spammy or higher-severity context)
     free_dom_hits = sum(1 for d in (from_domains + to_domains) if d in FREE_EMAIL_DOMAINS)
     feats["free_email_domain_hits"] = float(free_dom_hits)
 
@@ -294,7 +294,7 @@ def extract_engineered_features(case: Dict, keywords: Optional[List[str]] = None
     # -----------------------------
     # Composite signals (these are the levers you’ll later use to downrank spam)
     # -----------------------------
-    # Fraud signal: prioritize control bypass + bank changes + money ops + tampering
+    # Ethics signal: prioritize control bypass + bank changes + money ops + tampering
     fraud_signal = (
         2.5 * feats["bank_change_hits"]
         + 2.0 * feats["approval_bypass_hits"]

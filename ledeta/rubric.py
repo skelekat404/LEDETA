@@ -1,6 +1,6 @@
 #DESCIPTION: rubric.py defines the dissertation’s proxy case-prioritization logic. 
 # It converts engineered case features into an ethics-oriented score, applies a spam 
-# penalty to produce the final triage score, flags clearly spam-dominant low-risk 
+# penalty to produce the final triage score, flags clearly spam-dominant low-severity 
 # cases for filtering, limits Critical outcomes through a multi-category gate, and 
 # returns both structured score components and human-readable reasons. The 
 # backward-compatible wrapper then exposes the triage score as the model’s supervised 
@@ -47,7 +47,7 @@ def score_case_rubric_v3(case: Dict, keywords: List[str] = DEFAULT_KEYWORDS) -> 
       - fraud_score (0..100): (kept for backwards compatibility) now means "ethics_score"
       - triage_score (0..100): ethics_score minus spam penalty (clamped and gated)
       - spam_penalty (0..45)
-      - spam_filtered (bool): True if case is very likely newsletter/promo AND low ethics risk
+      - spam_filtered (bool): True if case is very likely newsletter/promo AND low ethics severity
       - reasons: list[str]
       - components: dict of point components (pre-saturation)
     """
@@ -129,7 +129,7 @@ def score_case_rubric_v3(case: Dict, keywords: List[str] = DEFAULT_KEYWORDS) -> 
     # -----------------------------
     # 3) Hard spam filter flag (drop obvious newsletters)
     # -----------------------------
-    # If it is very spammy AND ethics signal is low, treat as spam-only and filter out
+    # If it is very spammy AND ethics severity is low, treat as spam-only and filter out
     # Thresholds tuned to be conservative (avoid filtering real misconduct accidentally).
     spam_filtered = bool(
         (spam_signal >= 6.0 or (has_unsubscribe >= 1.0 and url_count >= 2.0) or marketing_hits >= 3.0)
@@ -194,13 +194,12 @@ def score_case_rubric_v3(case: Dict, keywords: List[str] = DEFAULT_KEYWORDS) -> 
     # NOTE: Keep legacy keys for the rest of your app
     return {
         "fraud_score": ethics_score,      # legacy key (now ethics_score)
+        "ethics_score": ethics_score,     # preferred score label
         "triage_score": triage_score,
         "spam_penalty": spam_penalty,
         "spam_filtered": spam_filtered,
         "reasons": reasons,
         "components": components,
-        # nice-to-have aliases (won’t break anything)
-        "ethics_score": ethics_score,
     }
 
 

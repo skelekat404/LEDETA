@@ -67,9 +67,9 @@ def _append_jsonl(path: str, payload: dict): #helper function: write one JSON re
     except Exception as e: #if anything goes wrong, catch exception
         st.warning(f"Could not write to audit log: {e}") #warning message instead of crashing
 
-# Visualize the distribution of priority bands so users can quickly
+# Visualize the distribution of severity levels so users can quickly
 # understand queue composition under rubric-only or ML-assisted modes.
-def _band_counts_chart(df: pd.DataFrame, mode: str): #function to build bar chart showing how many cases fall into each priority band.
+def _band_counts_chart(df: pd.DataFrame, mode: str): #function to build bar chart showing how many cases fall into each severity level.
     band_order = ["Low", "Medium", "High", "Critical"] #defines desired order of the bands so charts always display in sequence
 
     if mode.startswith("Rubric"): #check whether app is in rubric mode
@@ -80,32 +80,32 @@ def _band_counts_chart(df: pd.DataFrame, mode: str): #function to build bar char
             .reindex(band_order, fill_value=0) #forces the output into low->critical order and fills missing bands with 0
             .reset_index() #turns result into regular df
         )
-        counts.columns = ["band", "count"] #renames df columns to band and count
+        counts.columns = ["severity", "count"]
 
         return ( #creates and returns and altair bar chart
             alt.Chart(counts) #uses the counts dataframe
             .mark_bar(color="blue") #blue bar chart
             .encode(
-                x=alt.X("band:N", sort=band_order, title="Band"), #encodes band names as nominal categories
-                y=alt.Y("count:Q", title="Cases"), #encodes the counts as quantitative values
-                tooltip=["band:N", "count:Q"], #shows band and count when hovered
+                x=alt.X("severity:N", sort=band_order, title="Severity"),
+                y=alt.Y("count:Q", title="Cases"),
+                tooltip=["severity:N", "count:Q"],
             )
             .properties(height=220) #sets chart height
         )
 
     band_counts = pd.DataFrame({ #if not in rubric mode, this builds a df with 1 row per band and 2 count columns
-        "band": band_order,
+        "severity": band_order,
         "Rubric": df.get("rubric_band", pd.Series(dtype=str)).astype(str).value_counts().reindex(band_order, fill_value=0).values, #handles missing columns
         "ML": df.get("ml_band", pd.Series(dtype=str)).astype(str).value_counts().reindex(band_order, fill_value=0).values, #handles missing columns
     })
 
-    band_long = band_counts.melt("band", var_name="source", value_name="count") #converts wide df into long format so Altair can plot grouped bars by source (rubric vs ML)
+    band_long = band_counts.melt("severity", var_name="source", value_name="count") #converts wide df into long format so Altair can plot grouped bars by source (rubric vs ML)
 
     return ( #creates a grouped bar chart comparing rubric and ML counts
         alt.Chart(band_long)
         .mark_bar()
         .encode(
-            x=alt.X("band:N", sort=band_order, title="Band"),
+            x=alt.X("severity:N", sort=band_order, title="Severity"),
             y=alt.Y("count:Q", title="Cases"),
             xOffset=alt.XOffset("source:N"), #separates the bars within each band
             color=alt.Color( 
@@ -113,7 +113,7 @@ def _band_counts_chart(df: pd.DataFrame, mode: str): #function to build bar char
                 scale=alt.Scale(domain=["Rubric", "ML"], range=["blue", "red"]), #maps source to blue or red
                 legend=alt.Legend(title="") #shows which source is which
             ),
-            tooltip=["band:N", "source:N", "count:Q"], #shows band, source and count
+            tooltip=["severity:N", "source:N", "count:Q"], #shows band, source and count
         )
         .properties(height=220)
     )
@@ -389,12 +389,12 @@ if triage_mode.startswith("Rubric"): #checks whether traige mode is rubric
         st.stop() #stop app from continuing w/ empty case queue
 
 
-    if rank_mode.startswith("Fraud"): #checks whether selected ranking is Fraud (LEGACY)
+    if rank_mode.startswith("Ethics"): #checks whether selected ranking is Ethics
         sort_col = "ethics_score" #if so, rank by ethics score
-        band_col = "fraud_band" #use ethics/fraud band column as band column
+        band_col = "fraud_band" #legacy internal column still maps to ethics severity
     else: #otherwise sort by triage score
         sort_col = "triage_score"
-        band_col = "triage_band" #use triage band as band column
+        band_col = "triage_band" #use triage band as severity column
 
     df_cases = df_cases.sort_values(sort_col, ascending=False) #sort cases from highest score to lowest based on chosen score column
     df_cases["display_score"] = df_cases[sort_col] #creates generic display_score column so rest of UI can work the same way regardless of which score is being shown
@@ -438,8 +438,8 @@ if triage_mode.startswith("Rubric"): #checks whether traige mode is rubric
             )
             df_cases.loc[crit_mask, "display_band"] = "High" #changes the weak critical cases to high. .loc used to modify only the rows matching the mask
 
-            st.caption( #displays actual numeric thresholds used for band calibration so user can see cutoffs
-                f"Band calibration: Medium≥{q_med:.1f}, "
+            st.caption(
+                f"Severity calibration: Medium≥{q_med:.1f}, "
                 f"High≥{q_high:.1f}, "
                 f"Critical≥max({q_crit:.1f}, {CRITICAL_FLOOR:.1f})"
             )
@@ -483,7 +483,7 @@ t_score = time.perf_counter() - t0 #calculates total time spent in scoring secti
 # -----------------------------
 
 # Apply user-controlled filters so the prioritized queue can be narrowed
-# by band, employee, and date range. This supports practical review workflows
+# by severity, employee, and date range. This supports practical review workflows
 # rather than one-size-fits-all output.
 t_filter_start = time.perf_counter() #starts timming the filter section
 
@@ -501,7 +501,7 @@ df_cases["window_start"] = pd.to_datetime(df_cases["window_start"], errors="coer
 df_cases["window_end"] = pd.to_datetime(df_cases["window_end"], errors="coerce") #same for window_end
 
 all_bands = ["Low", "Medium", "High", "Critical"] #defines 4 possible options for filter widget
-selected_bands = st.sidebar.multiselect("Priority bands", options=all_bands, default=all_bands) #crreates a multiselect widget allowing user to include and combo of 4 bands. default all are selected
+selected_bands = st.sidebar.multiselect("Severity", options=all_bands, default=all_bands) #crreates a multiselect widget allowing user to include and combo of 4 bands. default all are selected
 
 employees_sorted = sorted(df_cases["employee"].dropna().unique().tolist()) #builds sorted list of unique employee names, exclusing missing. populates employee filter
 selected_employees = st.sidebar.multiselect("Employees", options=employees_sorted, default=[]) #creates multiselect widget for employees. default is empty, unless user selects
@@ -642,24 +642,47 @@ if log_run_metrics: #checks whether the user wants runtime metrics logged
 # Display table + summary chart (filtered)
 # -----------------------------
 
-# Display the filtered case queue and a visual summary of band counts
+# Display the filtered case queue and a visual summary of severity counts
 # so reviewers can inspect both individual cases and overall distribution.
 col1, col2 = st.columns([2, 1]) #create 2 columns, left one twice as wide as right one. table goes on left, summary stats on right
 
 with col1: #starts the left column block
     if triage_mode.startswith("Rubric"): #checks if rubric mode to choose correct display columns
-        wanted_display = [ #defines desired table columns for rubric mode
+        df_filtered["severity"] = df_filtered["display_band"].astype(str)
+
+        wanted_display = [
             "case_id", "employee", "window_start", "window_end", "n_emails",
-            "display_score", "display_band",
+            "display_score", "severity",
             "triage_score", "triage_band",
             "ethics_score",
             "spam_penalty", "spam_filtered",
         ]
     else: #or the desired table columns for ML mode
-        wanted_display = ["case_id", "employee", "window_start", "window_end", "n_emails", "ml_score", "ml_band", "rubric_score", "abs_error"]
+        df_filtered["severity"] = df_filtered["display_band"].astype(str)
 
-    display_cols = [c for c in wanted_display if c in df_filtered.columns] #keeps only display columns that actually exist in filtered df
-    st.dataframe(df_filtered[display_cols], use_container_width=True, hide_index=True) #displays filtered case table using the columns. use_contrainer_width = true makes it fill in available space. hide_index=trie hides rownums
+        wanted_display = ["case_id", "employee", "window_start", "window_end", "n_emails", "ml_score", "severity", "rubric_score", "abs_error"]
+
+    display_cols = [c for c in wanted_display if c in df_filtered.columns]
+
+    display_df = df_filtered[display_cols].copy().rename(columns={
+        "display_score": "Severity score",
+        "severity": "Severity",
+        "triage_score": "Triage score",
+        "triage_band": "Triage severity",
+        "ml_score": "ML score",
+        "ml_band": "ML severity",
+        "rubric_score": "Rubric score",
+        "rubric_band": "Rubric severity",
+        "ethics_score": "Ethics score",
+        "spam_penalty": "Spam penalty",
+        "spam_filtered": "Spam filtered",
+        "case_id": "Case ID",
+        "window_start": "Window start",
+        "window_end": "Window end",
+        "n_emails": "Emails",
+    })
+
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
 
 with col2: #starts right summary column
     st.metric("Top score", float(df_filtered["display_score"].max())) #displays the max displayed score among filtered cases
