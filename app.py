@@ -82,16 +82,34 @@ def _band_counts_chart(df: pd.DataFrame, mode: str): #function to build bar char
         )
         counts.columns = ["severity", "count"]
 
-        return ( #creates and returns and altair bar chart
-            alt.Chart(counts) #uses the counts dataframe
-            .mark_bar(color="blue") #blue bar chart
+        bars = (
+            alt.Chart(counts)
+            .mark_bar(color="blue")
             .encode(
                 x=alt.X("severity:N", sort=band_order, title="Severity"),
-                y=alt.Y("count:Q", title="Cases"),
+                y=alt.Y(
+                    "count:Q",
+                    title="Cases",
+                    scale=alt.Scale(domain=[0, counts["count"].max() * 1.12])
+                ),
                 tooltip=["severity:N", "count:Q"],
             )
-            .properties(height=220) #sets chart height
         )
+
+        labels = (
+            alt.Chart(counts)
+            .mark_text(dy=-6, color="white")
+            .encode(
+                x=alt.X("severity:N", sort=band_order),
+                y=alt.Y(
+                    "count:Q",
+                    scale=alt.Scale(domain=[0, counts["count"].max() * 1.12])
+                ),
+                text=alt.Text("count:Q", format=".0f"),
+            )
+        )
+
+        return (bars + labels).properties(height=220)
 
     band_counts = pd.DataFrame({ #if not in rubric mode, this builds a df with 1 row per band and 2 count columns
         "severity": band_order,
@@ -101,27 +119,52 @@ def _band_counts_chart(df: pd.DataFrame, mode: str): #function to build bar char
 
     band_long = band_counts.melt("severity", var_name="source", value_name="count") #converts wide df into long format so Altair can plot grouped bars by source (rubric vs ML)
 
-    return ( #creates a grouped bar chart comparing rubric and ML counts
+    bars = (
         alt.Chart(band_long)
         .mark_bar()
         .encode(
             x=alt.X("severity:N", sort=band_order, title="Severity"),
-            y=alt.Y("count:Q", title="Cases"),
-            xOffset=alt.XOffset("source:N"), #separates the bars within each band
-            color=alt.Color( 
-                "source:N",
-                scale=alt.Scale(domain=["Rubric", "ML"], range=["blue", "red"]), #maps source to blue or red
-                legend=alt.Legend(title="") #shows which source is which
+            y=alt.Y(
+                "count:Q",
+                title="Cases",
+                scale=alt.Scale(domain=[0, band_long["count"].max() * 1.12])
             ),
-            tooltip=["severity:N", "source:N", "count:Q"], #shows band, source and count
+            xOffset=alt.XOffset("source:N"),
+            color=alt.Color(
+                "source:N",
+                scale=alt.Scale(domain=["Rubric", "ML"], range=["blue", "red"]),
+                legend=alt.Legend(title="")
+            ),
+            tooltip=["severity:N", "source:N", "count:Q"],
         )
-        .properties(height=220)
     )
+
+    labels = (
+        alt.Chart(band_long)
+        .mark_text(dy=-8, color="white")
+        .encode(
+            x=alt.X("severity:N", sort=band_order),
+            y=alt.Y(
+                "count:Q",
+                scale=alt.Scale(domain=[0, band_long["count"].max() * 1.12])
+            ),
+            xOffset=alt.XOffset("source:N"),
+            text=alt.Text("count:Q", format=".0f"),
+            detail="source:N",
+        )
+    )
+
+    return (bars + labels).properties(height=220)
 
 # Plot ML-predicted scores against rubric-derived scores to show
 # agreement between the model and the dissertation's proxy ground truth.
 def _ml_scatter_chart(df_eval: pd.DataFrame): #function to build ML-vs-rubric scatterplot
-    d = df_eval.copy() #makes a copy so the original df is not modified
+    d = df_eval.copy()
+
+    # Add very small jitter to reduce overplotting (does not change underlying values)
+    rng = np.random.default_rng(GLOBAL_RANDOM_STATE)
+    d["rubric_score_jitter"] = d["rubric_score"] + rng.uniform(-0.3, 0.3, size=len(d))
+    d["ml_score_jitter"] = d["ml_score"] + rng.uniform(-0.3, 0.3, size=len(d))
     d["rubric_score"] = pd.to_numeric(d["rubric_score"], errors="coerce") #converts rubric_score column to numeric values, invalid entries become NaN
     d["ml_score"] = pd.to_numeric(d["ml_score"], errors="coerce") #same conversion
     d = d.dropna(subset=["rubric_score", "ml_score"]) #drops rows where either score is missing, because those rows cannot be plotted meaningfully
@@ -132,11 +175,13 @@ def _ml_scatter_chart(df_eval: pd.DataFrame): #function to build ML-vs-rubric sc
     min_v = float(min(d["rubric_score"].min(), d["ml_score"].min())) #finds smallest value across both axes so diagonal reference line starts at the right minimum
     max_v = float(max(d["rubric_score"].max(), d["ml_score"].max())) #finds largest value across both acrs so the diagonal line ends at right max
 
-    base = alt.Chart(d).properties(height=280) #creates base Altair chart obj using cleaned df and sets chart height
+    base = alt.Chart(d).properties(height=280).encode(
+        x=alt.X(scale=alt.Scale(domain=[0, 100]))
+    ) #creates base Altair chart obj using cleaned df and sets chart height
 
-    points = base.mark_circle(size=35, opacity=0.85, color="red").encode( #scatterplot points as red circles
-        x=alt.X("rubric_score:Q", title="Rubric score (ground truth)"), #places rubric score on x-axis and labels it as ground truth comparator
-        y=alt.Y("ml_score:Q", title="ML predicted score"), #places ML score on Y-axis
+    points = base.mark_circle(size=35, opacity=0.65, color="red").encode(
+        x=alt.X("rubric_score_jitter:Q", title="Rubric score (ground truth)"),
+        y=alt.Y("ml_score_jitter:Q", title="ML predicted score"),
         tooltip=[ #defines what will appear when each part is hovered over
             alt.Tooltip("case_id:N", title="Case"),
             alt.Tooltip("employee:N", title="Employee"),
@@ -147,12 +192,25 @@ def _ml_scatter_chart(df_eval: pd.DataFrame): #function to build ML-vs-rubric sc
     )
 
     diag = alt.Chart(pd.DataFrame({"x": [min_v, max_v], "y": [min_v, max_v]})).mark_line(
-        color="blue", strokeDash=[6, 4] #creates blue dashed diagonal line where x = y
-    ).encode(x="x:Q", y="y:Q") #this line represents perfect agreement between rubric and ML
+        color="blue", strokeDash=[6, 4]
+    ).encode(x="x:Q", y="y:Q")
 
-    return diag + points #return diagonal reference line layered on top of the scatterplot points
+    cutoff_df = pd.DataFrame({
+        "x": [25, 50, 75],
+        "label": ["Low/Medium", "Medium/High", "High/Critical"],
+    })
 
+    cutoffs = (
+        alt.Chart(cutoff_df)
+        .mark_rule(color="yellow", strokeWidth=3)
+        .encode(
+            x=alt.X("x:Q"),
+            tooltip=["label:N", "x:Q"],
+        )
+    )
 
+    return cutoffs + diag + points
+    
 # -----------------------------
 # Sidebar controls 
 # -----------------------------
@@ -688,6 +746,7 @@ with col2: #starts right summary column
     st.metric("Top score", float(df_filtered["display_score"].max())) #displays the max displayed score among filtered cases
     st.metric("Median score", float(df_filtered["display_score"].median())) #displays median displayed score
     st.altair_chart(_band_counts_chart(df_filtered, triage_mode), use_container_width=True) #builds and shows the band-count chart using your helper function
+
     if triage_mode.startswith("ML"): #if in ML mode, shows a color legend caption for the grouped band chart
         st.caption("Color key: **Rubric = blue**, **ML = red**")
 
@@ -712,7 +771,13 @@ if (not triage_mode.startswith("Rubric")) and (ml_eval_metrics is not None): #on
     sc = _ml_scatter_chart(chart_df) #generates the ML vs rubric scatter chart using helper func.
     if sc is not None: #checks that helper func actually returned a chart
         st.altair_chart(sc, use_container_width=True) #displays the scatter chart
-        st.caption("Color key: **ML points = red**. Diagonal reference line = **rubric agreement (blue)**.") #shows a caption explaining the point and line colors in scatterplot
+        st.caption(
+            f"Color key: **ML points = red**. Diagonal reference line = **rubric agreement (blue)**. "
+            f"Vertical cutoff lines at 25, 50, and 75 indicate the Low, Medium, High, and Critical score regions. "
+            f"A small jitter is applied to reduce overlap; true values are preserved in tooltips. "
+            f"Scatterplot displays {ml_eval_metrics['n_eval']:,} evaluated cases for visual clarity, "
+            f"compared with {n_cases_total:,} total cases built in this run."
+        )
 
     st.markdown("**Largest ML errors (top 10)**") #label for error table
     if "abs_error" in df_cases.columns: #checks that df contains absolute error column
