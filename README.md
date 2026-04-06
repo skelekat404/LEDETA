@@ -55,7 +55,7 @@ This prototype supports two input modes: file path pasting or file upload.
 
 - ++ ADD RUBRIC FILE EXPLANATIONS - ⏳
 
-- ++ CHANGE BAND VERBIAGE --> SEVERITY - ⏳
+- ++ CHANGE BAND VERBIAGE --> SEVERITY - ✅
 
 - ++ RUBRIC SCORE VISUAL -> ADD TRANSPARENCY AND HORIZONTAL JITTER (A LITTLE BIT) - ⏳
 
