@@ -25,7 +25,6 @@ This prototype supports two input modes: file path pasting or file upload.
 - Feature extraction:
   - volume/communication metrics
   - keyword indicators (misconduct)
-  - TF-IDF text features
 - Priority rubric (proxy ground truth) + optional supervised model
 - Explainability:
   - drivers + evidence snippets
