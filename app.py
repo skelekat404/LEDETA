@@ -208,8 +208,23 @@ def _ml_scatter_chart(df_eval: pd.DataFrame): #function to build ML-vs-rubric sc
             tooltip=["label:N", "x:Q"],
         )
     )
+    # Region label annotations — placed at midpoints of each score band
+    region_labels_df = pd.DataFrame({
+        "x": [12.5, 37.5, 62.5, 87.5],
+        "y": [3.0, 3.0, 3.0, 3.0],
+        "label": ["Low", "Medium", "High", "Critical"],
+    })
+    region_labels = (
+        alt.Chart(region_labels_df)
+        .mark_text(fontSize=11, fontWeight="bold", color="yellow", opacity=0.85)
+        .encode(
+            x=alt.X("x:Q"),
+            y=alt.Y("y:Q"),
+            text=alt.Text("label:N"),
+        )
+    )
 
-    return cutoffs + diag + points
+    return cutoffs + diag + points + region_labels
     
 # -----------------------------
 # Sidebar controls 
@@ -272,12 +287,7 @@ with st.sidebar: #starts a block where all UI elements inside it are placed in S
     st.header("ML Evaluation") #start ML eval section
     if triage_mode.startswith("ML"): #checks current mode is ML
         force_retrain = st.checkbox("Force retrain ML model", value=False) #if in ML mode, provides checkbox to force the model to retrain instead of loading a saved one
-        ml_eval_sample_n = st.number_input( #lets user choose how many cases to use for rubric-vs-ML comparison
-            "Rubric comparison sample size (0 = all cases)",
-            min_value=0, #0 = all cases
-            value=500, #default
-            step=50, #increments
-        )
+        ml_eval_sample_n = 0  # Always evaluate all cases — no sampling
     else: #if not in ML mode, set the variables to harmless defaults
         force_retrain = False
         ml_eval_sample_n = 0
@@ -510,7 +520,7 @@ if triage_mode.startswith("Rubric"): #checks whether traige mode is rubric
 # because the dissertation's target variable is the proxy prioritization score.
 else: #if app not in rubric mode, enter ML mode branch
     train_res = train_or_load_model(cases, force_retrain=bool(force_retrain)) #calls training/loading func, passes in all cases, and whether user forced retraining
-    sample_n = None if int(ml_eval_sample_n) == 0 else int(ml_eval_sample_n) #converts the sidebar ML eval sample size into None if 0 (meaning evaluate all cases) OR an integer sample size
+    sample_n = None  # Always use all cases
 
     # --- Show what ML model is actually being used (LightGBM vs fallback) ---
     model_kind = None #intializes the model kind variable
@@ -743,8 +753,8 @@ with col1: #starts the left column block
     st.dataframe(display_df, use_container_width=True, hide_index=True)
 
 with col2: #starts right summary column
-    st.metric("Top score", float(df_filtered["display_score"].max())) #displays the max displayed score among filtered cases
-    st.metric("Median score", float(df_filtered["display_score"].median())) #displays median displayed score
+    st.metric("Top score", f"{float(df_filtered['display_score'].max()):.2f}")
+    st.metric("Median score", f"{float(df_filtered['display_score'].median()):.2f}")
     st.altair_chart(_band_counts_chart(df_filtered, triage_mode), use_container_width=True) #builds and shows the band-count chart using your helper function
 
     if triage_mode.startswith("ML"): #if in ML mode, shows a color legend caption for the grouped band chart
@@ -775,8 +785,8 @@ if (not triage_mode.startswith("Rubric")) and (ml_eval_metrics is not None): #on
             f"Color key: **ML points = red**. Diagonal reference line = **rubric agreement (blue)**. "
             f"Vertical cutoff lines at 25, 50, and 75 indicate the Low, Medium, High, and Critical score regions. "
             f"A small jitter is applied to reduce overlap; true values are preserved in tooltips. "
-            f"Scatterplot displays {ml_eval_metrics['n_eval']:,} evaluated cases for visual clarity, "
-            f"compared with {n_cases_total:,} total cases built in this run."
+            f"Scatterplot displays all {ml_eval_metrics['n_eval']:,} evaluated cases. "
+            f"Total cases built in this run: {n_cases_total:,}."
         )
 
     st.markdown("**Largest ML errors (top 10)**") #label for error table
