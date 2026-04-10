@@ -1,65 +1,71 @@
 # LEDETA - Law Enforcement Digital Evidence Triage Assistant
 
-This repo is a dissertation prototype for **case-level** triage of text-based evidence (emails).
-A "case" is defined as **all emails for one employee in a 30-day window**.
+> A dissertation prototype for **case-level** triage of text-based digital evidence (emails).  
+> A **case** = all emails for one employee within a 30-day window.
 
-## Quick start
+---
+
+## 🚀 Quick Start
+
 ```bash
 python -m venv .venv
-# Windows: .venv\Scripts\activate
+
+# Activate (macOS/Linux):
 source .venv/bin/activate
+
+# Activate (Windows):
+.venv\Scripts\activate
 
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Data expectations (flexible)
-This prototype supports two input modes: file path pasting or file upload.
-1) Upload your own CSV with at least: `employee`, `date`, `subject`, `body` (not recommended since we have demo data)
-2) Use the built-in demo dataset in the repo (synthetic) to validate the app works (recommended, varying sizes)
-3) Use the Enron cleaned up dataset (download and move to 'datatset' folder in project directory)
-   https://www.dropbox.com/scl/fo/0f7ayl1fj8f0wzsoyq3s2/AEPwwA9NZlitAlCq6OYkaYw?rlkey=n4dzsedpyn9lqw2dwqtreipdk&st=muaum8nx&dl=0
+---
 
-## What this includes
-- Case builder: employee + 30-day window aggregation
-- Feature extraction:
-  - volume/communication metrics
-  - keyword indicators (misconduct)
-  - TF-IDF text features
-- Priority rubric (proxy ground truth) + optional supervised model
-- Explainability:
-  - drivers + evidence snippets
-- Audit log (JSONL) for each scoring run
+## 📂 Data Sources
 
-## (NEEDS TO BE UPDATED RIGHT BEFORE FINAL SUBMISSION - APRIL 10TH)
+| Option | Description |
+|--------|-------------|
+| **Built-in demo** | Synthetic dataset included in `/datasets/` - recommended for first run |
+| **Upload CSV** | Upload your own file with at least: `employee`, `date`, `subject`, `body` |
+| **Enron full dataset** | [Download via Dropbox](https://www.dropbox.com/scl/fo/0f7ayl1fj8f0wzsoyq3s2/AEPwwA9NZlitAlCq6OYkaYw?rlkey=n4dzsedpyn9lqw2dwqtreipdk&st=muaum8nx&dl=0) — place in `/datasets/` folder |
 
-- ++ ADD A DROP BOX LINK WITH BIG ENRON DATA FILE - ✅
+---
 
-- ++ ADD APP FILE EXPLANATIONS - ✅
+## 🗂️ File Overview
 
-- ++ ADD RQ 1 FILE EXPLANATIONS - ✅
+| File / Folder | Purpose |
+|---------------|---------|
+| `app.py` | Main Streamlit app - loads data, builds cases, scores, filters, and renders the full triage UI |
+| `ledeta/case_builder.py` | Aggregates raw email rows into case objects (employee + 30-day window) |
+| `ledeta/rubric.py` | Rubric-based prioritization engine - produces proxy ground-truth triage scores |
+| `ledeta/model.py` | Trains or loads LightGBM ML model; generates predictions and rubric comparisons |
+| `ledeta/features.py` | Feature extraction: volume/communication metrics, keyword signals, TF-IDF text features |
+| `ledeta/explain.py` | Generates per-case explanation output: summary text, top drivers, evidence snippets |
+| `ledeta/audit.py` | Audit logger - writes structured JSONL records for each scoring/explanation run |
+| `tests/run_rq1_predictive_validity.py` | RQ1 test: predictive validity evaluation |
+| `tests/run_rq2b_inference_only.py` | RQ2b test: inference-only performance benchmark |
+| `tests/run_rq_kfold_window_validation.py` | 5-fold cross-validation - validates emails don't bleed across windows |
+| `datasets/` | Holds the synthetic demo dataset (and Enron if downloaded) |
+| `ledeta_models/` | Serialized trained models (`.joblib`) |
+| `EDA.ipynb` | Exploratory data analysis notebook |
+| `audit_log.jsonl` | Running audit log written during app use |
+| `rq1_results.csv`, `rq2_runs.csv`, etc. | Stored RQ output files |
 
-- ++ ADD RQ 2 FILE EXPLANATIONS -⏳
+---
 
-- ++ ADD EDA FILE EXPLANATION - ⏳
-  
-- ++ ADD RQ OUTPUT EXPLANATIONS - ⏳
+## ⚙️ What LEDETA Does
 
-- ++ ADD CASE BUILDER FILE EXPLANATIONS - ⏳
+- **Case construction** - groups emails by employee and 30-day non-overlapping windows
+- **Rubric scoring** - transparent, rule-based priority score (proxy ground truth)
+- **ML-assisted mode** - LightGBM model trained to predict rubric scores
+- **Severity banding** - quantile-calibrated Low / Medium / High / Critical labels
+- **Explainability** - per-case driver scores and evidence snippet surfacing
+- **Investigator filters** - filter queue by severity, employee, and date range
+- **Audit logging** - every run writes traceable JSONL records
 
-- ++ ADD EXPLAIN FILE EXPLANATIONS - ⏳
+---
 
-- ++ ADD FEATURES FILE EXPLANATIONS -⏳
+## 📄 License
 
-- ++ ADD MODEL FILE EXPLANATIONS - ⏳
-
-- ++ ADD RUBRIC FILE EXPLANATIONS - ⏳
-
-- ++ CHANGE BAND VERBIAGE --> SEVERITY - ✅
-
-- ++ RUBRIC SCORE VISUAL -> ADD TRANSPARENCY AND HORIZONTAL JITTER (A LITTLE BIT) - ✅
-
-- ++ SPLIT SCATTER PLOT INTO 4 SECTIONS, USE THE CUTOFFS, (IE, ADD A VERTICAL LINE AT CUTOFF VALUE 1) - ⏳
-
-- ++ ADDING A DISCREPENCY TO THE BAND (RENAME) CHART (RATHER THAN HOVER OVER, MAKE A VISUAL) - ⏳
-
+This project is licensed under the **MIT License** - see [`LICENSE`](LICENSE) for details.
