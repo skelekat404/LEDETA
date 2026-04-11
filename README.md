@@ -60,9 +60,9 @@ streamlit run app.py
 - **Feature extraction** — counts keyword hits across seven ethics signal groups, computes spam signal from unsubscribe/URL/marketing language, calculates temporal burst (max emails in a single day), and measures communication breadth (recipient counts, external domain ratios)
 - **Rubric scoring** — weights ethics signals (secrecy ×3.2, bypass ×2.8, tampering ×2.6, urgency, distancing, money ops), applies a spam penalty (up to 45 points), saturates scores to 0–100 via an exponential function, and enforces a critical rarity gate
 - **ML-assisted mode** — LightGBM regressor trained on rubric-derived scores using an 80/20 split with median imputation; predictions clipped to 0–100
-- **Severity banding** — quantile-calibrated Low / Medium / High / Critical labels with a hard floor preventing weak cases from reaching Critical
+- **Severity scoring** — quantile-calibrated Low / Medium / High / Critical labels with a hard floor preventing weak cases from reaching Critical
 - **Explainability** — per-case driver scores and evidence snippet surfacing to support human review
-- **Investigator filters** — filter queue by severity band, employee, and case window date range
+- **Investigator filters** — filter queue by severity, employee, and case window date range
 - **Audit logging** — every scored and explained case writes a traceable JSONL record with timestamp, run ID, score, band, and explanation payload
 
 ---
